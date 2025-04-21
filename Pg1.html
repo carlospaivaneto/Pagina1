@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Financeiro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .summary-box {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            width: 32%;
+            text-align: center;
+        }
+        
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        input, select {
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        
+        input[type="text"] {
+            flex: 2;
+        }
+        
+        input[type="number"] {
+            flex: 1;
+        }
+        
+        select {
+            width: 150px;
+        }
+        
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background-color: #1557b0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            font-weight: bold;
+        }
+        
+        .action-btn {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+        }
+        
+        .delete-btn {
+            color: #d32f2f;
+        }
+        
+        .transaction-type {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .entrada {
+            background-color: #2cc16a;
+        }
+        
+        .saida {
+            background-color: #d32f2f;
+        }
+        
+        .arrow-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="summary">
+            <div class="summary-box">
+                <h3>Entradas: R$</h3>
+                <h2 id="total-entradas">0.00</h2>
+            </div>
+            <div class="summary-box">
+                <h3>Saídas: R$</h3>
+                <h2 id="total-saidas">0.00</h2>
+            </div>
+            <div class="summary-box">
+                <h3>Total: R$</h3>
+                <h2 id="saldo-total">0.00</h2>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <input type="text" id="descricao" placeholder="Descrição">
+            <input type="number" id="valor" placeholder="Valor" step="0.01">
+            <select id="tipo">
+                <option value="entrada">Entrada</option>
+                <option value="saida">Saída</option>
+            </select>
+            <button id="incluir-btn">Incluir</button>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Tipo</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="transacoes">
+                <!-- As transações serão adicionadas aqui dinamicamente -->
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        // Estado da aplicação
+        let transacoes = [];
+        
+        // Elementos DOM
+        const descricaoInput = document.getElementById('descricao');
+        const valorInput = document.getElementById('valor');
+        const tipoSelect = document.getElementById('tipo');
+        const incluirBtn = document.getElementById('incluir-btn');
+        const transacoesTable = document.getElementById('transacoes');
+        const totalEntradasEl = document.getElementById('total-entradas');
+        const totalSaidasEl = document.getElementById('total-saidas');
+        const saldoTotalEl = document.getElementById('saldo-total');
+        
+        // Carregar dados do localStorage ao iniciar
+        function carregarDados() {
+            const dadosSalvos = localStorage.getItem('transacoes');
+            if (dadosSalvos) {
+                transacoes = JSON.parse(dadosSalvos);
+                atualizarTabela();
+                calcularSumario();
+            }
+        }
+        
+        // Salvar dados no localStorage
+        function salvarDados() {
+            localStorage.setItem('transacoes', JSON.stringify(transacoes));
+        }
+        
+        // Adicionar nova transação
+        function adicionarTransacao() {
+            const descricao = descricaoInput.value.trim();
+            const valor = parseFloat(valorInput.value);
+            const tipo = tipoSelect.value;
+            
+            if (descricao === '' || isNaN(valor) || valor <= 0) {
+                alert('Por favor, preencha todos os campos corretamente!');
+                return;
+            }
+            
+            const novaTransacao = {
+                id: Date.now(), // ID único baseado no timestamp
+                descricao,
+                valor,
+                tipo
+            };
+            
+            transacoes.push(novaTransacao);
+            
+            // Limpar campos do formulário
+            descricaoInput.value = '';
+            valorInput.value = '';
+            tipoSelect.value = 'entrada';
+            
+            // Atualizar interface
+            atualizarTabela();
+            calcularSumario();
+            salvarDados();
+        }
+        
+        // Remover transação
+        function removerTransacao(id) {
+            transacoes = transacoes.filter(transacao => transacao.id !== id);
+            
+            // Atualizar interface
+            atualizarTabela();
+            calcularSumario();
+            salvarDados();
+        }
+        
+        // Atualizar tabela de transações
+        function atualizarTabela() {
+            transacoesTable.innerHTML = '';
+            
+            transacoes.forEach(transacao => {
+                const tr = document.createElement('tr');
+                
+                const tdDescricao = document.createElement('td');
+                tdDescricao.textContent = transacao.descricao;
+                
+                const tdValor = document.createElement('td');
+                tdValor.textContent = `R$ ${transacao.valor.toFixed(2)}`;
+                
+                const tdTipo = document.createElement('td');
+                const tipoSpan = document.createElement('span');
+                tipoSpan.className = `transaction-type ${transacao.tipo}`;
+                
+                const arrowIcon = document.createElement('span');
+                arrowIcon.className = 'arrow-icon';
+                arrowIcon.innerHTML = transacao.tipo === 'entrada' ? '↑' : '↓';
+                
+                tipoSpan.appendChild(arrowIcon);
+                tdTipo.appendChild(tipoSpan);
+                
+                const tdAcoes = document.createElement('td');
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'action-btn delete-btn';
+                deleteBtn.innerHTML = '🗑️';
+                deleteBtn.addEventListener('click', () => removerTransacao(transacao.id));
+                tdAcoes.appendChild(deleteBtn);
+                
+                tr.appendChild(tdDescricao);
+                tr.appendChild(tdValor);
+                tr.appendChild(tdTipo);
+                tr.appendChild(tdAcoes);
+                
+                transacoesTable.appendChild(tr);
+            });
+        }
+        
+        // Calcular e atualizar sumário
+        function calcularSumario() {
+            let totalEntradas = 0;
+            let totalSaidas = 0;
+            
+            transacoes.forEach(transacao => {
+                if (transacao.tipo === 'entrada') {
+                    totalEntradas += transacao.valor;
+                } else {
+                    totalSaidas += transacao.valor;
+                }
+            });
+            
+            const saldoTotal = totalEntradas - totalSaidas;
+            
+            totalEntradasEl.textContent = totalEntradas.toFixed(2);
+            totalSaidasEl.textContent = totalSaidas.toFixed(2);
+            saldoTotalEl.textContent = saldoTotal.toFixed(2);
+        }
+        
+        // Event Listeners
+        incluirBtn.addEventListener('click', adicionarTransacao);
+        
+        // Inicialização
+        carregarDados();
+    </script>
+</body>
+</html>
